@@ -59,6 +59,58 @@ To pre-load your Neo4j AuraDB instance with a clinical subgraph based on these s
 
 This will search for the seed terms, build the hierarchical closure, and upsert the nodes and relationships directly into your AuraDB instance.
 
+## Development Environment
+
+There are two primary paths for developing and running this triage system:
+
+### Path A: Google Colab (Cloud-based)
+Ideal for quick interactive testing and leveraging cloud GPUs if needed. Since Colab instances are ephemeral, you must use Google Drive for persistence of your configuration and libraries.
+
+1.  **Prepare Google Drive**: Create a folder (e.g., `CareTrace`) in your MyDrive. Copy `snomed2neo.py`, `symptom_finder.py`, and your `.env` file into this folder.
+2.  **Mount and Setup**: Run the following at the start of your notebook:
+    ```python
+    from google.colab import drive
+    import os
+    drive.mount('/content/drive')
+    
+    # Symlink project files for easy import
+    PROJECT_PATH = '/content/drive/MyDrive/CareTrace'
+    for f in ['.env', 'snomed2neo.py', 'symptom_finder.py']:
+        if os.path.exists(f"{PROJECT_PATH}/{f}") and not os.path.exists(f):
+            os.symlink(f"{PROJECT_PATH}/{f}", f)
+    
+    from dotenv import load_dotenv
+    load_dotenv()
+    ```
+
+### Path B: Visual Studio Code (Container-based)
+Recommended for full-scale development. Using a container ensures all system dependencies (Python 3.10+, pyDatalog, Neo4j drivers) are perfectly configured.
+
+1.  **Requirement**: Install Docker and the **Dev Containers** extension in VS Code.
+2.  **Launch Container**: 
+    - Open the project folder in VS Code.
+    - Press `F1` (or `Cmd+Shift+P`) and select **"Dev Containers: Reopen in Container"**.
+    - VS Code will build the image from the local `Dockerfile` and connect your editor directly to the running environment.
+3.  **Authentication**: Once inside the container, you can run `gemini` and sign in with your Google Account for secure, keyless access to LLM services.
+
+If you don't yet have docker, then install it, and run this command:
+
+```bash
+docker build -t caretrace_with_gemini_sandbox:1 .
+```
+
+Now that you have a container, you can run:
+
+```bash
+docker run -it --name gemini-sandbox -v $(pwd):/workspace -v ~/.gitconfig:/root/.gitconfig:ro -w /workspace caretrace_with_gemini_sandbox:1 /bin/bash
+```
+
+To use gemini cli, once in the container you should run
+
+```
+gemini
+```
+
 
 ## References
 
@@ -67,87 +119,3 @@ The following reference materials are available in the `references/` folder:
 - [Architecting Intelligence](./references/Architecting_Intelligence.pdf): An extremely short guide on the evolution from property graphs to Neuro-Symbolic AI architectures.
 - [Mastering pyDatalog](./references/Mastering_pyDatalog_Knowledge_Graphs.pdf): A very quick intro to using declarative logic and pyDatalog for building medical knowledge graphs.
 
-## Development with Gemini CLI
-
-Interact with `gemini-cli` via a Docker container using the following command:
-
-```bash
-docker run -it --name gemini-sandbox -v $(pwd):/workspace -v ~/.gitconfig:/root/.gitconfig:ro -w /workspace custom-bookworm:1 /bin/bash
-```
-
-Once you are on the terminal window within the container, run:
-
-```
-source .venv/bin/activate
-gemini
-```
-
-Prefer signing in with your Google Account - this way you benefit from an ephemeral
-authentication token which is safer than holding on to keys on a local file.
-
-If you don't yet have docker, then install it, and run this command to create a container to sandbox gemini:
-
-```bash
-docker build -t custom-bookworm:1 .
-```
-
-## Working with Jupyter Notebooks in Visual Studio Code
-
-To work with `.ipynb` files in Visual Studio Code, follow these steps:
-
-1. **Install VS Code Extensions:**
-   - Go to the **Extensions** view (Ctrl+Shift+X or Cmd+Shift+X).
-   - Search for and install the **Python** extension (by Microsoft).
-   - Search for and install the **Jupyter** extension (by Microsoft).
-
-2. **Set Up a Virtual Environment & Install Dependencies:**
-   Run the following script to create, activate the virtual environment, and install the required packages:
-
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-3. **Select Kernel in VS Code:**
-   - Open `neurosymbolic_triage_v2-2.ipynb`.
-   - Click on **Select Kernel** in the top-right corner of the editor.
-   - Choose the virtual environment (`.venv`) you created.
-
-## Google Colab & Persistence
-
-To ensure `snomed2neo.py` and your `.env` credentials persist across Google Colab sessions, it is recommended to store them in Google Drive. This avoids the need to re-upload files or manually enter credentials into the Secrets panel every time.
-
-### 1. Mount Google Drive in your Notebook
-Add a cell at the top of your notebook to mount your drive:
-
-```python
-from google.colab import drive
-import os
-
-drive.mount('/content/drive')
-```
-
-### 2. Link Files from Drive
-Assuming your project files are in `/content/drive/MyDrive/CareTrace`, use the following code to make the library and credentials available in your current session:
-
-```python
-# Path to your project folder in Google Drive
-PROJECT_PATH = '/content/drive/MyDrive/CareTrace'
-
-# Link the .env file
-if os.path.exists(f"{PROJECT_PATH}/.env"):
-    if not os.path.exists(".env"):
-        os.symlink(f"{PROJECT_PATH}/.env", ".env")
-
-# Link the snomed2neo.py library
-if os.path.exists(f"{PROJECT_PATH}/snomed2neo.py"):
-    if not os.path.exists("snomed2neo.py"):
-        os.symlink(f"{PROJECT_PATH}/snomed2neo.py", "snomed2neo.py")
-
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
-```
-
-By using this approach, your environment is automatically configured whenever you mount your drive.
