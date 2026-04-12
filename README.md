@@ -1,6 +1,13 @@
 # CareTrace — Neurosymbolic Pediatric Triage Agent
 DATASCI 290 Final Project
 
+## References
+
+The following reference materials are available in the `references/` folder:
+
+- [Architecting Intelligence](./references/Architecting_Intelligence.pdf): An extremely short guide on the evolution from property graphs to Neuro-Symbolic AI architectures.
+- [Mastering pyDatalog](./references/Mastering_pyDatalog_Knowledge_Graphs.pdf): A very quick intro to using declarative logic and pyDatalog for building medical knowledge graphs.
+
 ## Development with Gemini CLI
 
 Interact with `gemini-cli` via a Docker container using the following command:
