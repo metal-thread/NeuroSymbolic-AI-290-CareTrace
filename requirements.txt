@@ -6,3 +6,4 @@ pyDatalog
 ipython
 requests
 pandas
+python-dotenv

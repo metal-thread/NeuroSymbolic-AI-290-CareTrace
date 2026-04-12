@@ -54,3 +54,41 @@ To work with `.ipynb` files in Visual Studio Code, follow these steps:
    - Open `neurosymbolic_triage_v2-2.ipynb`.
    - Click on **Select Kernel** in the top-right corner of the editor.
    - Choose the virtual environment (`.venv`) you created.
+
+## Google Colab & Persistence
+
+To ensure `snomed2neo.py` and your `.env` credentials persist across Google Colab sessions, it is recommended to store them in Google Drive. This avoids the need to re-upload files or manually enter credentials into the Secrets panel every time.
+
+### 1. Mount Google Drive in your Notebook
+Add a cell at the top of your notebook to mount your drive:
+
+```python
+from google.colab import drive
+import os
+
+drive.mount('/content/drive')
+```
+
+### 2. Link Files from Drive
+Assuming your project files are in `/content/drive/MyDrive/CareTrace`, use the following code to make the library and credentials available in your current session:
+
+```python
+# Path to your project folder in Google Drive
+PROJECT_PATH = '/content/drive/MyDrive/CareTrace'
+
+# Link the .env file
+if os.path.exists(f"{PROJECT_PATH}/.env"):
+    if not os.path.exists(".env"):
+        os.symlink(f"{PROJECT_PATH}/.env", ".env")
+
+# Link the snomed2neo.py library
+if os.path.exists(f"{PROJECT_PATH}/snomed2neo.py"):
+    if not os.path.exists("snomed2neo.py"):
+        os.symlink(f"{PROJECT_PATH}/snomed2neo.py", "snomed2neo.py")
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+```
+
+By using this approach, your environment is automatically configured whenever you mount your drive.
