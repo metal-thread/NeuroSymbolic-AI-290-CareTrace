@@ -1,5 +1,11 @@
 import sys
+import os
 from typing import List
+
+# Ensure parent and agents directories are in path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "agents")))
+
 from langchain_core.messages import HumanMessage, AIMessage
 from triage_state import TriageState, ClinicalState
 from interpretation_agent import interpretation_agent

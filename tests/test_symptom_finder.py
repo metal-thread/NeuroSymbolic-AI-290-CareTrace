@@ -1,5 +1,11 @@
 import os
+import sys
 from dotenv import load_dotenv
+
+# Ensure parent and snomed_kg directories are in path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "snomed_kg")))
+
 from snomed2neo import execute_cypher_query
 from symptom_finder import (
     get_symptoms_by_keywords, 

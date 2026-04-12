@@ -96,6 +96,12 @@ class ClinicalState(BaseModel):
         description="Raw or partially processed responses from the caregiver before clinical grounding."
     )
 
+    # Grounded Medical Entities
+    snomed_concepts: List[str] = Field(
+        default_factory=list,
+        description="List of SNOMED CT concepts grounded from the caregiver input (e.g., 'SCTID: 386661002')."
+    )
+
 class TriageState(TypedDict):
     """
     LangGraph state definition for the Neurosymbolic Triage System.

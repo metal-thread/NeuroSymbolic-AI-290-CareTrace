@@ -1,5 +1,11 @@
 import os
+import sys
 from dotenv import load_dotenv
+
+# Ensure parent and snomed_kg directories are in path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "snomed_kg")))
+
 from typing import Annotated, TypedDict, List, Optional
 from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
