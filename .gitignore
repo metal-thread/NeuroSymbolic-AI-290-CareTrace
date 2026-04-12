@@ -1,0 +1,51 @@
+# =========================
+# macOS Specific
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# =========================
+# Jupyter Notebook Specific
+# =========================
+# Ignore Jupyter checkpoint files (creates a lot of clutter)
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# Ignore Jupyter/IPython configuration and profile files
+profile_default/
+ipython_config.py
+
+# =========================
+# Python Environment & Cache
+# =========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =========================
+# General Data & Outputs (Optional but recommended)
+# =========================
+# If your notebooks generate large datasets, models, or logs, 
+# it's best to keep them out of version control.
+*.csv
+*.dat
+*.out
+*.log
+*.sqlite
+*.db
+*.h5
+*.pkl
+.env
+

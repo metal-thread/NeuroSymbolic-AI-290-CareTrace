@@ -1,0 +1,8 @@
+langchain
+langchain-anthropic
+langgraph
+neo4j
+pyDatalog
+ipython
+requests
+pandas
