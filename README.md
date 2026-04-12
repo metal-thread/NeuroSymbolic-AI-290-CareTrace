@@ -72,7 +72,7 @@ The following reference materials are available in the `references/` folder:
 Interact with `gemini-cli` via a Docker container using the following command:
 
 ```bash
-docker run -it -e TERM=xterm-256color --name gemini-sandbox -v $(pwd):/workspace -v ~/.gitconfig:/root/.gitconfig:ro -w /workspace node:20-bullseye /bin/bash
+docker run -it --name gemini-sandbox -v $(pwd):/workspace -v ~/.gitconfig:/root/.gitconfig:ro -w /workspace custom-bookworm:1 /bin/bash
 ```
 
 Once you are on the terminal window within the container, run:
@@ -85,17 +85,10 @@ gemini
 Prefer signing in with your Google Account - this way you benefit from an ephemeral
 authentication token which is safer than holding on to keys on a local file.
 
-If you don't yet have docker, then install it, and run the command above. If this is the first time running the container, execute the following to install `gemini-cli`, setup the environment, and install dependencies:
+If you don't yet have docker, then install it, and run this command to create a container to sandbox gemini:
 
 ```bash
-# Install Gemini CLI and system dependencies
-npm install -g @google/gemini-cli
-apt-get update && apt-get install -y python3-pip python3-venv
-
-# Set up the virtual environment and install project requirements
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+docker build -t custom-bookworm:1 .
 ```
 
 ## Working with Jupyter Notebooks in Visual Studio Code

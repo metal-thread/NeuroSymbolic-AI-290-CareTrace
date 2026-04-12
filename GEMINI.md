@@ -23,24 +23,34 @@ We are building a multi-agent triage system that interacts with a caregiver.
 ---
 
 # Multi-Agent Architecture
-The system consists of 5 specific agents. All code and architectural suggestions must align with these strict boundaries:
+The system consists of 5 specific agents orchestrating the neurosymbolic pipeline. All code and architectural suggestions must align with these strict boundaries:
 
-1. **Interpretation Agent (LLM):** * Extracts symptoms, timing, hydration signals, and medications from caregiver natural language.
-   * Maps text to clinical facts.
-   * Generates targeted follow-up questions for missing info.
-   * *Constraint:* Never makes triage decisions.
-2. **Knowledge Retrieval Agent (Neo4j):** * Queries the Neo4j graph populated with SNOMED concepts.
-   * Uses IS_A hierarchies to generalize findings.
-   * Retrieves authoritative references (dosing, contraindications).
-3. **Logic Safety Agent (pyDatalog):** * The deterministic supervisor.
-   * Evaluates grounded facts against triage protocols and safety rules.
-   * Produces the disposition, required next questions, and an exact rule trace.
-4. **Explanation Agent (LLM):** * Transforms the logic decision into an audit-grade, clinician-style explanation.
-   * Highlights key positives/negatives and explicit safety net thresholds.
-   * *Uncertainty Mandate:* Must explicitly state what is known, unknown, assumed, and suggested by priors.
-5. **Orchestration Agent (LangGraph):** * Manages the global state.
-   * Routes between intake, red-flag screening, stabilization, dosing, and planning.
-   * Handles loop-backs to the Interpretation Agent when the Logic Safety Agent demands more data.
+1. **Orchestration Agent (LangGraph):** * **Role:** The state machine and routing supervisor where the graph state acts as shared memory for the entire workflow.
+   * **State Management:** The state holds the caregiver's input, extracted clinical facts, fetched SNOMED concepts, and the pyDatalog rule trace. 
+   * **Node Interface (State I/O):** Nodes function as isolated, stateless operators that read the global `TriageState` and return partial state updates. LangGraph reducers merge these outputs back into the global state (e.g., overwriting scalars, appending to lists).
+   * **Routing & Edges:** Dynamically routes using standard (deterministic) and conditional (runtime) edges. **Crucially**, if the Logic Safety Agent determines that data is missing, the Orchestration Agent must route the workflow back to the Interpretation Agent to gather more information.
+   * **Cyclic Routing & Sleep:** Handles multi-step, autonomous internal reasoning (looping). For conversational turns, the router directs execution to formulate a question and then routes to the `END` node, suspending the graph (thread sleeps) until new caregiver input is captured and appended.
+
+2. **Interpretation Agent (LLM):** * **Role:** The natural language intake node.
+   * **Extraction:** Extracts core clinical facts such as symptoms, timing/duration, hydration signals, and current medications from caregiver input.
+   * **State Update:** Populates the state with raw extracted data, looking for clinical facts *without making any decisions or triage assessments*.
+   * **Re-Invocation:** If triggered by the Orchestration Agent due to missing data, it formulates targeted, bounded follow-up questions to retrieve the missing fields.
+
+3. **Knowledge Retrieval Agent (Neo4j):** * **Role:** The semantic grounding node.
+   * **Graph Enrichment:** Enriches extracted facts by querying a Neo4j AuraDB instance preloaded with SNOMED CT data.
+   * **Tool Usage:** Utilizes tools (such as those in `symptom_finder.py`) to run Cypher queries.
+   * **Generalization & Attributes:** Traverses `IS_A` polyhierarchies to generalize specific findings. It also queries attribute relationships to retrieve actionable clinical references such as causative agents, medication dosing parameters, and contraindications. Findings are added directly to the state.
+
+4. **Logic Safety Agent (pyDatalog):** * **Role:** The deterministic supervisor.
+   * **Reasoning:** Performs bottom-up deductive reasoning on the grounded facts supplied by the Knowledge Retrieval Agent.
+   * **Evaluation:** Evaluates facts against hard-coded clinical practice guidelines (CPGs) and safety rules.
+   * **Output:** Must supply a complete logical "proof tree" to the state detailing the disposition, OR explicitly output exactly which clinical facts are missing to trigger a loop-back via the Orchestration Agent.
+
+5. **Explanation Agent (LLM):** * **Role:** The clinical translator.
+   * **Summary Generation:** Translates the raw pyDatalog proof tree into an understandable, audit-grade, clinician-style summary.
+   * **Clinical Highlights:** Must highlight key positive and negative findings and explicitly identify any safety net thresholds that were crossed.
+   * **Uncertainty Mandate:** Must explicitly state what is *known*, *unknown*, *assumed*, and *suggested by priors*.
+   * **Provenance:** To justify individual triage outcomes, the agent must include the exact deterministic decision rules used for the patient in its final output.
 
 ---
 
@@ -71,6 +81,11 @@ The system consists of 5 specific agents. All code and architectural suggestions
   * Optimize graph queries for latency.
 * **pyDatalog:** * Group rules logically. 
   * Add inline comments explaining the clinical intent of every logical threshold or red-flag gate.
+* **Gemini-3-Pro Configuration**: Configure the system with
+  * thinking={"include_thoughts": True} and tool_calling_method="json_schema", following 2026 project standards.
+  * LangGraph & Interaction-Aware State: Used StateGraph with a TriageState that utilizes add_messages for history management.
+  * Automatic Thought Signature Handling: The architecture preserves thought_signature and reasoning metadata within the message history, ensuring consistency across multi-turn interactions.
+  * MemorySaver: Integrated for round-trip serialization and persistent conversation threads.
 
 ---
 
