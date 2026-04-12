@@ -72,7 +72,7 @@ The following reference materials are available in the `references/` folder:
 Interact with `gemini-cli` via a Docker container using the following command:
 
 ```bash
-docker run -it -e TERM=xterm-256color --name gemini-sandbox -v $(pwd):/workspace -w /workspace node:20-bullseye /bin/bash
+docker run -it -e TERM=xterm-256color --name gemini-sandbox -v $(pwd):/workspace -v ~/.gitconfig:/root/.gitconfig:ro -w /workspace node:20-bullseye /bin/bash
 ```
 
 Once you are on the terminal window within the container, run:

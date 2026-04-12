@@ -5,6 +5,7 @@ import requests
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Set, Any
 from neo4j import GraphDatabase
+from dotenv import load_dotenv
 
 # =====================================================================
 # HIGH-LEVEL API & USAGE GUIDE
@@ -63,6 +64,31 @@ def load_knowledge_graph_to_neo4j(kg: 'SnomedKnowledgeGraph', uri: str, user: st
     finally:
         # Ensure the driver connection is closed even if an error occurs during load
         loader.close()
+
+def execute_cypher_query(query: str, params: Optional[Dict[str, Any]] = None, driver: Optional[Any] = None) -> List[Dict[str, Any]]:
+    """
+    Executes a Cypher query against a Neo4j database. 
+    If no driver is provided, one is instantiated using environment variables 
+    (NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD) and closed after the results are fetched.
+    """
+    actual_driver = driver
+    close_driver = False
+    
+    if actual_driver is None:
+        load_dotenv()
+        uri = os.environ.get("NEO4J_URI")
+        user = os.environ.get("NEO4J_USERNAME")
+        password = os.environ.get("NEO4J_PASSWORD")
+        actual_driver = GraphDatabase.driver(uri, auth=(user, password))
+        close_driver = True
+        
+    try:
+        with actual_driver.session() as session:
+            result = session.run(query, params or {})
+            return result.data()
+    finally:
+        if close_driver:
+            actual_driver.close()
 
 
 # =====================================================================
