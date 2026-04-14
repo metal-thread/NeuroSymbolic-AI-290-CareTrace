@@ -5,6 +5,14 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from triage_state import TriageState
 
+def get_gemini_3_model():
+    """Ensures a supported Gemini 3 version is used."""
+    requested_model = os.environ.get("LLM_MODEL", "gemini-3-pro-preview")
+    # Force gemini-3 if something else (lower) is provided
+    if not requested_model.startswith("gemini-3"):
+        return "gemini-3-pro-preview"
+    return requested_model
+
 def explanation_agent(state: TriageState) -> Dict[str, Any]:
     """
     Explanation Agent node.
@@ -13,18 +21,23 @@ def explanation_agent(state: TriageState) -> Dict[str, Any]:
     3. Justifies the disposition using the symbolic rules matched.
     """
     clinical_state = state.get("clinical_state")
+    if clinical_state is None:
+        from triage_state import ClinicalState
+        clinical_state = ClinicalState()
     datalog_proof_tree = state.get("datalog_proof_tree", {})
     decision = state.get("decision", {})
     
-    # Initialize LLM
+    # Initialize LLM with Gemini 3 validation
     # Following 2026 project standards:
     # Use thinking={"include_thoughts": True} and tool_calling_method="json_schema"
     llm = ChatGoogleGenerativeAI(
-        model=os.environ.get("LLM_MODEL", "gemini-3-pro"),
+        model=get_gemini_3_model(),
         temperature=float(os.environ.get("LLM_TEMP", "0.3")),
-        google_api_key=os.environ.get("GOOGLE_API_KEY", "dummy_key"),
-        thinking={"include_thoughts": True},
-        tool_calling_method="json_schema"
+        google_api_key=os.environ.get("GEMINI_API_KEY"),
+        model_kwargs={
+            "thinking": {"include_thoughts": True},
+            "tool_calling_method": "json_schema"
+        }
     )
 
     # Prepare context for the prompt
@@ -63,7 +76,10 @@ def explanation_agent(state: TriageState) -> Dict[str, Any]:
         "proof": proof_summary
     })
 
+    content = response.content
+    if isinstance(content, list):
+        content = "".join([block.get("text", "") if isinstance(block, dict) else str(block) for block in content])
 
     return {
-        "explanation": response.content
+        "explanation": content
     }

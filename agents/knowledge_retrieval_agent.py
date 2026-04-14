@@ -15,6 +15,8 @@ def knowledge_retrieval_agent(state: TriageState) -> Dict[str, Any]:
     3. Updates medical_ontology_findings and clinical_state boolean flags.
     """
     clinical_state = state.get("clinical_state")
+    if clinical_state is None:
+        clinical_state = ClinicalState()
     symptoms = clinical_state.symptoms
     medications = clinical_state.medications
     

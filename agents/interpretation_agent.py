@@ -6,6 +6,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
 from triage_state import TriageState, ClinicalState
 
+def get_gemini_3_model():
+    """Ensures a supported Gemini 3 version is used."""
+    requested_model = os.environ.get("LLM_MODEL", "gemini-3-pro-preview")
+    # Force gemini-3 if something else (lower) is provided
+    if not requested_model.startswith("gemini-3"):
+        return "gemini-3-pro-preview"
+    return requested_model
+
 def interpretation_agent(state: TriageState) -> Dict[str, Any]:
     """
     Interpretation Agent node.
@@ -15,20 +23,25 @@ def interpretation_agent(state: TriageState) -> Dict[str, Any]:
     """
     messages = state.get("messages", [])
     clinical_state = state.get("clinical_state")
+    if clinical_state is None:
+        clinical_state = ClinicalState()
     unknowns = state.get("unknowns", [])
+    last_action = state.get("last_action")
     
-    # Initialize LLM
+    # Initialize LLM with Gemini 3 validation
     llm = ChatGoogleGenerativeAI(
-        model=os.environ.get("LLM_MODEL", "gemini-3-pro"),
+        model=get_gemini_3_model(),
         temperature=0.0,
-        google_api_key=os.environ.get("GOOGLE_API_KEY", "dummy_key"),
-        thinking={"include_thoughts": True},
-        tool_calling_method="json_schema"
+        google_api_key=os.environ.get("GEMINI_API_KEY"),
+        model_kwargs={
+            "thinking": {"include_thoughts": True},
+            "tool_calling_method": "json_schema"
+        }
     )
 
     # CASE 1: Addressing missing clinical information (Loop-back)
-    # Triggered if safety logic found unknowns and we haven't just asked a question
-    if unknowns and (not messages or not isinstance(messages[-1], HumanMessage)):
+    # Triggered if safety logic found unknowns and we need to clarify
+    if unknowns and last_action == "safety_logic":
         field_to_clarify = unknowns[0]
         field_info = ClinicalState.model_fields.get(field_to_clarify)
         hint = ""
@@ -42,12 +55,17 @@ def interpretation_agent(state: TriageState) -> Dict[str, Any]:
         q_chain = q_prompt | llm
         q_response = q_chain.invoke({"field": field_to_clarify, "hint": hint})
         
+        content = q_response.content
+        if isinstance(content, list):
+            content = "".join([block.get("text", "") if isinstance(block, dict) else str(block) for block in content])
+        
         return {
-            "messages": [AIMessage(content=q_response.content)],
+            "messages": [AIMessage(content=content)],
             "last_action": "clarification"
         }
 
     # CASE 2: Processing caregiver input (Intake/Extraction)
+    # Only if we haven't just come from safety_logic with unknowns
     if messages and isinstance(messages[-1], HumanMessage):
         caregiver_text = messages[-1].content
         
@@ -91,11 +109,17 @@ def interpretation_agent(state: TriageState) -> Dict[str, Any]:
         e_response = e_chain.invoke({"text": caregiver_text})
         
         try:
-            content = e_response.content.strip()
+            content = e_response.content
+            if isinstance(content, list):
+                # Handle 2026/latest langchain-google-genai format where content is a list of blocks
+                content = "".join([block.get("text", "") if isinstance(block, dict) else str(block) for block in content])
+            
+            content = content.strip()
             if content.startswith("```json"): content = content[7:-3]
             elif content.startswith("```"): content = content[3:-3]
             extracted_data = json.loads(content)
-        except Exception:
+        except Exception as e:
+            print(f"Error parsing extraction response: {e}")
             extracted_data = {}
 
         current_data = clinical_state.model_dump()

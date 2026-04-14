@@ -4,6 +4,8 @@ from triage_state import TriageState, ClinicalState
 
 def logic_safety_agent(state: TriageState) -> Dict[str, Any]:
     cs = state.get("clinical_state")
+    if cs is None:
+        cs = ClinicalState()
     
     # 1. Setup pyDatalog
     pyDatalog.clear()

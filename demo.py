@@ -68,8 +68,8 @@ def main():
     # Load environment variables (API keys, DB credentials)
     load_dotenv()
     
-    if not os.environ.get("GOOGLE_API_KEY"):
-        print("Warning: GOOGLE_API_KEY not found. LLM calls will fail unless mocked.")
+    if not os.environ.get("GEMINI_API_KEY") and not os.environ.get("GOOGLE_API_KEY"):
+        print("Warning: Neither GEMINI_API_KEY nor GOOGLE_API_KEY found. LLM calls will fail unless mocked.")
     
     # SCENARIO 01: 6-Year-Old with Fever and Vomiting (Home Management)
     scenario_01_turns = [
