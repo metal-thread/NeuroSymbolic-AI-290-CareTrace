@@ -2,6 +2,11 @@ import os
 import sys
 from dotenv import load_dotenv
 
+# How to run the demo:
+# To execute the turn-by-turn demonstration, ensure your .env file contains a valid
+# GOOGLE_API_KEY and run:
+# 1 PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/agents:$(pwd)/snomed_kg python3 demo.py
+
 # Ensure the agents and snomed_kg directories are in the path
 sys.path.append(os.path.join(os.getcwd(), "agents"))
 sys.path.append(os.path.join(os.getcwd(), "snomed_kg"))

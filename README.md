@@ -6,6 +6,7 @@ DATASCI 290 Final Project
 - [Project Structure](#project-structure)
 - [Knowledge Graph Design](#knowledge-graph-design)
 - [Development Environment](#development-environment)
+- [Running the Demo](#running-the-demo)
 - [References](#references)
 
 ## High Level Overview
@@ -145,6 +146,27 @@ To use gemini cli, once in the container you should run
 gemini
 ```
 
+
+## Running the Demo
+
+The system includes a `demo.py` script that demonstrates the turn-by-turn neurosymbolic triage workflow for the included scenarios (`scenario01.md` and `scenario02.md`).
+
+### Prerequisites
+1.  **Environment Variables**: Ensure your `.env` file contains a valid `GOOGLE_API_KEY` for LLM access and Neo4j credentials (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`).
+2.  **Dependencies**: Install the required packages:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Execution
+Run the demo script from the project root using the following command to ensure all modules are in the python path:
+
+```bash
+export PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/agents:$(pwd)/snomed_kg
+python3 demo.py
+```
+
+The script will walk through each turn of the scenarios, displaying the caregiver's input, the system's extracted facts and reasoning, and the final recommendation compared against the reference scenario.
 
 ## References
 
