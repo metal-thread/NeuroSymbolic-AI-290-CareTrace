@@ -102,6 +102,21 @@ class ClinicalState(BaseModel):
         description="True if child is vomiting.",
         json_schema_extra={"question": "Has your child been vomiting?"}
     )
+    cpg_trouble_breathing: Optional[bool] = Field(
+        default=None,
+        description="True if child has trouble breathing.",
+        json_schema_extra={"question": "Is your child having any trouble breathing?"}
+    )
+    cpg_fast_breathing: Optional[bool] = Field(
+        default=None,
+        description="True if child is breathing very fast.",
+        json_schema_extra={"question": "Is your child breathing very fast?"}
+    )
+    cpg_pain: Optional[bool] = Field(
+        default=None,
+        description="True if child is in pain or complains of pain.",
+        json_schema_extra={"question": "Does your child seem to be in pain or are they complaining of pain (like in the neck, ears, or throat)?"}
+    )
     
     # 12-13. History
     cpg_medical_history: Optional[str] = Field(

@@ -47,9 +47,15 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
    * **Tool Usage:** Utilizes tools in `snomed_kg/symptom_finder.py`.
 
 4. **Logic Safety Agent (pyDatalog):** * **Role:** The deterministic supervisor.
-   * **Reasoning:** Performs bottom-up deductive reasoning on the grounded facts supplied by the Knowledge Retrieval Agent.
-   * **Evaluation:** Evaluates facts against hard-coded clinical practice guidelines (CPGs) and safety rules.
-   * **Output:** Must supply a complete logical "proof tree" to the state detailing the disposition, OR explicitly output exactly which clinical facts are missing to trigger a loop-back via the Orchestration Agent.
+   * **Workflow:**
+      1. Receives the grounded `TriageState`.
+      2. Validates presence of critical variables (`cpg_age`, `cpg_body_temperature`, `fever_duration`).
+      3. **Missing Data:** If variables are missing, it populates `unknowns` and triggers a loop-back via the Orchestration Agent.
+      4. **Deterministic Reasoning:** Executes CPG rules via `pyDatalog`:
+         *   **ER_NOW:** Evaluates red flags (infant fever, respiratory distress, neurological signs, dehydration, chronic conditions).
+         *   **HOME_OBSERVATION:** Evaluates safety for home care (stable vitals, age > 3m, good behavior/hydration).
+      5. **Output:** Stores the final disposition and `datalog_proof_tree` (fired rules and facts) in the state.
+   * **Safety Defaults:** If no rules match or assessment is ambiguous, the agent defaults to the highest acuity disposition (Emergency Department Now).
 
 5. **Explanation Agent (LLM):** * **Role:** The clinical translator.
    * **Summary Generation:** Translates the raw pyDatalog proof tree into an understandable, audit-grade, clinician-style summary.
