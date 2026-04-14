@@ -55,12 +55,16 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
 
 4. **Logic Safety Agent (pyDatalog):** * **Role:** The deterministic supervisor.
    * **Workflow:**
-      1. Receives the grounded `TriageState`.
-      2. Validates presence of critical variables (`cpg_age`, `cpg_body_temperature`, `fever_duration`).
-      3. **Missing Data:** If variables are missing, it populates `unknowns` and triggers a loop-back via the Orchestration Agent.
-      4. **Deterministic Reasoning:** Executes CPG rules via `pyDatalog`:
-         *   **ER_NOW:** Evaluates red flags (infant fever, respiratory distress, neurological signs, dehydration, chronic conditions).
-         *   **HOME_OBSERVATION:** Evaluates safety for home care (stable vitals, age > 3m, good behavior/hydration).
+      1. **Grounded Fact Assertion:** Receives the grounded `TriageState` and asserts clinical facts into the pyDatalog engine.
+      2. **Tiered Assessment (Sequential Data Gathering):** Validates the presence of critical variables using a tiered priority system to mirror clinical interaction patterns:
+         *   **Tier 1 (Initial):** Basic clinical picture (Age, Temperature, Behavior, Eating/Drinking).
+         *   **Tier 2 (Comprehensive):** Grounding and safety (Urination/Hydration, Medication history, Breathing effort).
+         *   **Tier 3 (Duration):** Longitudinal trends (Fever duration > 24h).
+      3. **Missing Data Handling:** If variables in the current active tier are missing, it populates `unknowns` and triggers a loop-back via the Orchestration Agent.
+      4. **Deterministic Reasoning & Priority Routing:** Executes CPG rules via `pyDatalog`:
+         *   **Priority 1/2 (Immediate ER):** High-acuity red flags (infant fever, respiratory distress, seizures, extreme fever > 105°F) that bypass data tiers for immediate disposition.
+         *   **Priority 3 (Clinical ER):** Complex red flags (lethargy combined with dehydration or high fever) evaluated once tiered data is complete.
+         *   **HOME_OBSERVATION:** Evaluates safety for home care (stable vitals, age > 3m, playful behavior, confirmed hydration).
       5. **Output:** Stores the final disposition and `datalog_proof_tree` (fired rules and facts) in the state.
    * **Safety Defaults:** If no rules match or assessment is ambiguous, the agent defaults to the highest acuity disposition (Emergency Department Now).
 
@@ -118,7 +122,7 @@ The workflow is orchestrated as a cyclic graph where each agent interacts with t
   * Add inline comments explaining the clinical intent of every logical threshold or red-flag gate.
 * **Gemini-3 Configuration**: Configure the system with
   * `gemini-3-flash-preview` as the default model.
-  * thinking={"include_thoughts": True} and tool_calling_method="json_schema" (passed via `model_kwargs`), following 2026 project standards.
+  * thinking={"include_thoughts": True, "thinking_level": "minimal"} and tool_calling_method="json_schema" (passed via `model_kwargs`), following 2026 project standards.
   * LangGraph & Interaction-Aware State: Used StateGraph with a TriageState that utilizes add_messages for history management.
   * Automatic Thought Signature Handling: The architecture preserves thought_signature and reasoning metadata within the message history, ensuring consistency across multi-turn interactions.
   * MemorySaver: Integrated for round-trip serialization and persistent conversation threads.

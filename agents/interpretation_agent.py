@@ -28,7 +28,7 @@ def interpretation_agent(state: TriageState) -> Dict[str, Any]:
         temperature=0.0,
         google_api_key=os.environ.get("GEMINI_API_KEY"),
         model_kwargs={
-            "thinking": {"include_thoughts": True},
+            "thinking": {"include_thoughts": True, "thinking_level": "minimal"},
             "tool_calling_method": "json_schema"
         }
     )
@@ -82,6 +82,7 @@ def interpretation_agent(state: TriageState) -> Dict[str, Any]:
             "cpg_body_temperature": float or null,
             "cpg_fever_measured": boolean or null,
             "cpg_wetting_diapers": boolean or null,
+            "urinated_recently": boolean or null,
             "cpg_dry_mouth": boolean or null,
             "cpg_vomiting": boolean or null,
             "cpg_seizure": boolean or null,

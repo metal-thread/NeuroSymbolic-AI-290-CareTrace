@@ -20,6 +20,7 @@ class ClinicalState(BaseModel):
     cpg_hydration_status: Optional[str] = Field(default=None)
     cpg_wetting_diapers: Optional[bool] = Field(default=None)
     cpg_dry_mouth: Optional[bool] = Field(default=None)
+    urinated_recently: Optional[bool] = Field(default=None)
     cpg_accompanying_symptoms: List[str] = Field(default_factory=list)
     cpg_seizure: Optional[bool] = Field(default=None)
     cpg_rash: Optional[bool] = Field(default=None)
