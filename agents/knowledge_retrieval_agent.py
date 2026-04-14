@@ -7,13 +7,6 @@ from snomed_kg.symptom_finder import (
 )
 
 def knowledge_retrieval_agent(state: TriageState) -> Dict[str, Any]:
-    """
-    Knowledge Retrieval Agent node.
-    
-    1. Examines extracted symptoms/medications from clinical_state.
-    2. Uses SNOMED tools to find concepts, generalize via IS_A, and find REL attributes.
-    3. Updates medical_ontology_findings and clinical_state boolean flags.
-    """
     clinical_state = state.get("clinical_state")
     if clinical_state is None:
         clinical_state = ClinicalState()

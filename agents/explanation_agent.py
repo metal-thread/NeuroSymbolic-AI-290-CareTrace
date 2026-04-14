@@ -7,19 +7,13 @@ from triage_state import TriageState
 
 def get_gemini_3_model():
     """Ensures a supported Gemini 3 version is used."""
-    requested_model = os.environ.get("LLM_MODEL", "gemini-3-pro-preview")
+    requested_model = os.environ.get("LLM_MODEL", "gemini-3-flash-preview")
     # Force gemini-3 if something else (lower) is provided
     if not requested_model.startswith("gemini-3"):
-        return "gemini-3-pro-preview"
+        return "gemini-3-flash-preview"
     return requested_model
 
 def explanation_agent(state: TriageState) -> Dict[str, Any]:
-    """
-    Explanation Agent node.
-    1. Extracts proof tree and clinical state.
-    2. Composes a natural language recommendation using Gemini 3 Pro.
-    3. Justifies the disposition using the symbolic rules matched.
-    """
     clinical_state = state.get("clinical_state")
     if clinical_state is None:
         from triage_state import ClinicalState

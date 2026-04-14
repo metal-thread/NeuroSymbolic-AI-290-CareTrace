@@ -8,19 +8,13 @@ from triage_state import TriageState, ClinicalState
 
 def get_gemini_3_model():
     """Ensures a supported Gemini 3 version is used."""
-    requested_model = os.environ.get("LLM_MODEL", "gemini-3-pro-preview")
+    requested_model = os.environ.get("LLM_MODEL", "gemini-3-flash-preview")
     # Force gemini-3 if something else (lower) is provided
     if not requested_model.startswith("gemini-3"):
-        return "gemini-3-pro-preview"
+        return "gemini-3-flash-preview"
     return requested_model
 
 def interpretation_agent(state: TriageState) -> Dict[str, Any]:
-    """
-    Interpretation Agent node.
-    1. Extracts clinical facts (symptoms, meds, duration, age, temp, etc.) from HumanMessage.
-    2. Strictly observational: No triage or medical advice.
-    3. Handles follow-up questions if 'unknowns' are present.
-    """
     messages = state.get("messages", [])
     clinical_state = state.get("clinical_state")
     if clinical_state is None:

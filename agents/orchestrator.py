@@ -70,6 +70,8 @@ def create_triage_graph():
 
     # Persistence
     memory = MemorySaver()
+    # Note: Custom Pydantic models like ClinicalState may trigger a msgpack 
+    # deserialization warning in current LangGraph versions.
     app = workflow.compile(checkpointer=memory)
     
     return app

@@ -30,7 +30,8 @@ def test_interpretation_intake():
         "medical_ontology_findings": [],
         "datalog_proof_tree": {},
         "explanation": "",
-        "thought_signature": None
+        "thought_signature": None,
+        "last_action": None
     }
     
     # Mock LLM Response
@@ -78,7 +79,8 @@ def test_interpretation_clarification():
         "medical_ontology_findings": [],
         "datalog_proof_tree": {},
         "explanation": "",
-        "thought_signature": None
+        "thought_signature": None,
+        "last_action": "safety_logic"
     }
     
     # Mock LLM Response for question generation

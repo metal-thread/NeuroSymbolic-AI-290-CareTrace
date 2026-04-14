@@ -63,13 +63,13 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
 5. **Explanation Agent (LLM):** * **Role:** The clinical translator.
    * **Workflow:**
       1. Receives the `TriageState` containing the `datalog_proof_tree`.
-      2. Uses Gemini 3 Pro to translate the raw symbolic logic into a warm, professional caregiver message.
+      2. Uses gemini-3-flash-preview to translate the raw symbolic logic into a warm, professional caregiver message.
       3. **Structure:**
          *   **Disposition:** Clear recommendation (ER vs Home).
          *   **Rationale:** Paraphrased justification based on rules fired (e.g., "Because your infant has a high fever...").
          *   **Comfort Measures:** Guidance on acetaminophen/ibuprofen if applicable for home care.
          *   **Safety Net:** Red flags to watch for.
-   * **Config:** Gemini-3-Pro with `thinking={"include_thoughts": True}` and `tool_calling_method="json_schema"`.
+   * **Config:** gemini-3-flash-preview with `thinking={"include_thoughts": True}` and `tool_calling_method="json_schema"` (provided via `model_kwargs`).
 
    The state is defined under agents/triage_state.py in the class TriageState. TriageState contains a field called clinical_state of type ClinicalState.
 
@@ -90,7 +90,7 @@ The workflow is orchestrated as a cyclic graph where each agent interacts with t
 * **No LLM Hallucination in Logic:** Do not use LLMs to evaluate triage rules. Triage logic must be 100% deterministic and executed in pyDatalog.
 * **Provenance is Mandatory:** Every decision, piece of advice, or dosage must be traceable to a specific rule fired in pyDatalog or a node retrieved from Neo4j.
 * **Fail-Safe Default:** If there is conflicting information, unresolvable uncertainty, or a system failure, the system must default to the highest-acuity disposition (Emergency Department Now).
-* **Strict Secrets Isolation:** Absolutely no hardcoded credentials. All LLM API keys, Neo4j URIs, and database passwords must be loaded strictly via `os.environ` or `dotenv`. 
+* **Strict Secrets Isolation:** Absolutely no hardcoded credentials. All LLM API keys (`GEMINI_API_KEY`), Neo4j URIs, and database passwords must be loaded strictly via `os.environ` or `dotenv`. 
 
 ---
 
@@ -112,8 +112,9 @@ The workflow is orchestrated as a cyclic graph where each agent interacts with t
   * Optimize graph queries for latency.
 * **pyDatalog:** * Group rules logically. 
   * Add inline comments explaining the clinical intent of every logical threshold or red-flag gate.
-* **Gemini-3-Pro Configuration**: Configure the system with
-  * thinking={"include_thoughts": True} and tool_calling_method="json_schema", following 2026 project standards.
+* **Gemini-3 Configuration**: Configure the system with
+  * `gemini-3-flash-preview` as the default model.
+  * thinking={"include_thoughts": True} and tool_calling_method="json_schema" (passed via `model_kwargs`), following 2026 project standards.
   * LangGraph & Interaction-Aware State: Used StateGraph with a TriageState that utilizes add_messages for history management.
   * Automatic Thought Signature Handling: The architecture preserves thought_signature and reasoning metadata within the message history, ensuring consistency across multi-turn interactions.
   * MemorySaver: Integrated for round-trip serialization and persistent conversation threads.
