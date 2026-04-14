@@ -1,6 +1,9 @@
 from typing import List, Dict, Any
 from langchain_core.tools import tool
-from snomed2neo import execute_cypher_query
+try:
+    from snomed_kg.snomed2neo import execute_cypher_query
+except ImportError:
+    from snomed2neo import execute_cypher_query
 
 @tool
 def get_symptoms_by_keywords(keywords: List[str]) -> List[Dict[str, Any]]:

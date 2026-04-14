@@ -28,8 +28,12 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
 1. **Orchestration Agent (LangGraph):** * **Role:** The state machine and routing supervisor where the graph state acts as shared memory for the entire workflow.
    * **State Management:** The state holds the caregiver's input, extracted clinical facts, fetched SNOMED concepts, and the pyDatalog rule trace. 
    * **Node Interface (State I/O):** Nodes function as isolated, stateless operators that read the global `TriageState` and return partial state updates. LangGraph reducers merge these outputs back into the global state (e.g., overwriting scalars, appending to lists).
-   * **Routing & Edges:** Dynamically routes using standard (deterministic) and conditional (runtime) edges. **Crucially**, if the Logic Safety Agent determines that data is missing, the Orchestration Agent must route the workflow back to the Interpretation Agent to gather more information.
-   * **Cyclic Routing & Sleep:** Handles multi-step, autonomous internal reasoning (looping). For conversational turns, the router directs execution to formulate a question and then routes to the `END` node, suspending the graph (thread sleeps) until new caregiver input is captured and appended.
+   * **Routing Workflow:**
+      1. **Intake:** Starts at the `Interpretation Agent`.
+      2. **Clarification Check:** If the interpreter emits a follow-up question (`last_action == "clarification"`), the router directs execution to `END`, suspending for caregiver input.
+      3. **Semantic Pipeline:** If clinical facts are extracted, execution proceeds to the `Knowledge Retrieval Agent` and then directly to the `Logic Safety Agent`.
+      4. **Safety Loop-back:** If `Logic Safety` identifies missing critical information (`unknowns`), the workflow routes back to the `Interpretation Agent` to generate a clarification question.
+      5. **Finalization:** If a decision is reached, the workflow routes to the `Explanation Agent` to formulate the final message, followed by `END`.
 
 2. **Interpretation Agent (LLM):** * **Role:** The natural language intake and clinical fact extraction node.
    * **Workflow:**

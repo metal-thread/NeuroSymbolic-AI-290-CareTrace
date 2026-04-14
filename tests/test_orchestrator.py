@@ -10,6 +10,25 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "a
 from langchain_core.messages import HumanMessage, AIMessage
 from triage_state import TriageState, ClinicalState
 from langgraph.graph import END
+from orchestrator import interpretation_router, logic_safety_router
+
+def test_routers():
+    print("Testing Router Logic...")
+    
+    # Test interpretation_router
+    state_ext = {"last_action": "extraction"}
+    assert interpretation_router(state_ext) == "knowledge_retrieval_agent"
+    
+    state_clar = {"last_action": "clarification"}
+    assert interpretation_router(state_clar) == END
+    
+    # Test logic_safety_router
+    state_unknown = {"unknowns": ["cpg_age"]}
+    assert logic_safety_router(state_unknown) == "interpretation_agent"
+    
+    state_dec = {"unknowns": [], "decision": {"disposition": "ER"}}
+    assert logic_safety_router(state_dec) == "explanation_agent"
+    print("✓ Routers Passed")
 
 def test_orchestrator_scenario_01():
     print("Testing Orchestrator: Scenario 01 (Home Management)...")
@@ -98,6 +117,7 @@ def test_orchestrator_scenario_02():
 
 if __name__ == "__main__":
     try:
+        test_routers()
         test_orchestrator_scenario_01()
         test_orchestrator_scenario_02()
         print("\nAll orchestrator tests passed successfully.")

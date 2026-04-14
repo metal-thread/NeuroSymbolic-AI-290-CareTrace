@@ -9,23 +9,23 @@ from knowledge_retrieval_agent import knowledge_retrieval_agent
 from logic_safety_agent import logic_safety_agent
 from explanation_agent import explanation_agent
 
-def router(state: TriageState) -> Literal["explanation_agent", "interpretation_agent", "__end__"]:
+def interpretation_router(state: TriageState) -> Literal["knowledge_retrieval_agent", "__end__"]:
     """
-    Explicitly routes the workflow based on clinical state and turn status.
+    Decides whether to continue to retrieval or end the turn for clarification.
     """
-    # 1. If we just asked a question (clarification), Turn ends here.
     if state.get("last_action") == "clarification":
         return END
-    
-    # 2. If logic safety found missing data, go back to interpret to ask the question.
+    return "knowledge_retrieval_agent"
+
+def logic_safety_router(state: TriageState) -> Literal["explanation_agent", "interpretation_agent"]:
+    """
+    Routes based on whether the logic safety agent found missing data or a final decision.
+    """
+    # 1. If logic safety found missing data, go back to interpret to ask the question.
     if state.get("unknowns"):
         return "interpretation_agent"
     
-    # 3. If we have a final decision, go to explanation.
-    if state.get("decision"):
-        return "explanation_agent"
-        
-    # Safety default
+    # 2. Otherwise, we have a decision (or a default ER), go to explanation.
     return "explanation_agent"
 
 def create_triage_graph():
@@ -40,38 +40,37 @@ def create_triage_graph():
     workflow.add_node("logic_safety_agent", logic_safety_agent)
     workflow.add_node("explanation_agent", explanation_agent)
 
-    # START Edge
+    # Workflow Edges
     workflow.add_edge(START, "interpretation_agent")
 
     # After interpretation, decide if we continue or END (if clarification was emitted)
     workflow.add_conditional_edges(
         "interpretation_agent",
-        lambda s: "knowledge_retrieval_agent" if s.get("last_action") == "extraction" else END,
+        interpretation_router,
         {
             "knowledge_retrieval_agent": "knowledge_retrieval_agent",
             END: END
         }
     )
 
+    # Knowledge Retrieval is always followed by Logic Safety
     workflow.add_edge("knowledge_retrieval_agent", "logic_safety_agent")
 
-    # Conditional Router from Safety
+    # Conditional Router from Safety: Loop back to interpretation OR proceed to explanation
     workflow.add_conditional_edges(
         "logic_safety_agent",
-        router,
+        logic_safety_router,
         {
             "explanation_agent": "explanation_agent",
-            "interpretation_agent": "interpretation_agent",
-            END: END
+            "interpretation_agent": "interpretation_agent"
         }
     )
 
+    # Explanation always ends the turn
     workflow.add_edge("explanation_agent", END)
 
     # Persistence
     memory = MemorySaver()
-    # Note: Custom Pydantic models like ClinicalState may trigger a msgpack 
-    # deserialization warning in current LangGraph versions.
     app = workflow.compile(checkpointer=memory)
     
     return app

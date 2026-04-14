@@ -127,7 +127,19 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any]:
     assert_v('ok_val', cs.cpg_comfort_level == 'good' or cs.cpg_comfort_level == 'ok' if cs.cpg_comfort_level else None)
 
     # 3. Decision Logic
-    # 3a. Check for missing data FIRST to ensure a complete clinical picture (as per Scenario 02)
+    # 3a. Check ER triggers FIRST for safety
+    er_results = pyDatalog.ask("has_disposition('ER_NOW', Reason)")
+    if er_results:
+        reasons = [r[0] for r in er_results.answers if r[0] != 'dummy']
+        if reasons:
+            return {
+                "decision": {"disposition": "Emergency Department Now", "reason": reasons[0]},
+                "datalog_proof_tree": {"disposition": "ER_NOW", "rules_fired": reasons},
+                "unknowns": [],
+                "last_action": "safety_logic"
+            }
+
+    # 3b. If no immediate ER triggers, check for missing data to ensure a complete picture
     missing_results = pyDatalog.ask("is_missing(Field) & required_for('complete_assessment', Field)")
     if missing_results:
         answers = [r[0] for r in missing_results.answers]
@@ -142,20 +154,7 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any]:
             mapped_unknowns = [mapping.get(u, u) for u in unknowns]
             return {"unknowns": mapped_unknowns, "last_action": "safety_logic"}
 
-    # 3b. If data is complete, evaluate triage rules
-    # Check ER triggers
-    er_results = pyDatalog.ask("has_disposition('ER_NOW', Reason)")
-    if er_results:
-        reasons = [r[0] for r in er_results.answers if r[0] != 'dummy']
-        if reasons:
-            return {
-                "decision": {"disposition": "Emergency Department Now", "reason": reasons[0]},
-                "datalog_proof_tree": {"disposition": "ER_NOW", "rules_fired": reasons},
-                "unknowns": [],
-                "last_action": "safety_logic"
-            }
-
-    # Check Home triggers
+    # 3c. If data is complete, check Home triggers
     home_results = pyDatalog.ask("has_disposition('HOME_OBSERVATION', Reason)")
     if home_results:
         reasons = [r[0] for r in home_results.answers if r[0] != 'dummy']
