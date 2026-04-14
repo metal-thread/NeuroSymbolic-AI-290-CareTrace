@@ -1,6 +1,13 @@
 # CareTrace — Neurosymbolic Pediatric Triage Agent
 DATASCI 290 Final Project
 
+### Table of Contents
+- [High Level Overview](#high-level-overview)
+- [Project Structure](#project-structure)
+- [Knowledge Graph Design](#knowledge-graph-design)
+- [Development Environment](#development-environment)
+- [References](#references)
+
 ## High Level Overview
 
 CareTrace is a high-stakes, trustworthy pediatric after-hours clinical triage system built using **Neurosymbolic AI**. The system assists caregivers in determining the appropriate level of care for a child based on symptoms, history, and vitals.
@@ -16,13 +23,6 @@ CareTrace is a high-stakes, trustworthy pediatric after-hours clinical triage sy
 - **Natural Language Explanation:** A warm, professional summary for the caregiver justifying the recommendation.
 - **Logic Trace:** A detailed "proof tree" from the logic engine for clinical audit.
 - **Care Instructions:** Comfort measures and medication dosing (e.g., acetaminophen/ibuprofen) where safe.
-
-### Table of Contents
-- [High Level Overview](#high-level-overview)
-- [Project Structure](#project-structure)
-- [Knowledge Graph Design](#knowledge-graph-design)
-- [Development Environment](#development-environment)
-- [References](#references)
 
 ### Project Structure
 - **`agents/`**: Core multi-agent implementation (Interpretation, Knowledge Retrieval, Logic Safety, Explanation) and LangGraph state definitions.

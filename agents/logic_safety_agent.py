@@ -1,15 +1,14 @@
 from pyDatalog import pyDatalog
 from typing import Dict, Any, List, Optional
-from langgraph.types import Command
 from triage_state import TriageState, ClinicalState
 
-def logic_safety_agent(state: TriageState) -> Dict[str, Any] | Command:
+def logic_safety_agent(state: TriageState) -> Dict[str, Any]:
     cs = state.get("clinical_state")
     
     # 1. Setup pyDatalog
     pyDatalog.clear()
     
-    # Define Terms and Rules via string
+    # Define Terms and Rules
     pyDatalog.load("""
         has_disposition(Type, Reason)
         age_val(Val)
@@ -37,7 +36,7 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any] | Command:
         is_missing(Field)
         required_for(Rule, Field)
 
-        # Ensure all predicates exist
+        # Ensure predicates exist with dummy facts
         + age_val(-1)
         + temp_val(-1)
         + dur24_val('dummy')
@@ -62,7 +61,7 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any] | Command:
         + behavior_val('dummy')
         + is_missing('dummy')
 
-        # Facts
+        # Mandatory Fields for a Complete Clinical Picture
         + required_for('complete_assessment', 'age')
         + required_for('complete_assessment', 'temp')
         + required_for('complete_assessment', 'dur24')
@@ -72,26 +71,27 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any] | Command:
         + required_for('complete_assessment', 'pee')
         + required_for('complete_assessment', 'dry')
 
-        # Rules
-        has_disposition('ER_NOW', 'age_and_duration_rule') <= age_val(X) & (X >= 0) & (X < 3) & temp_val(Y) & (Y >= 100.4)
-        has_disposition('ER_NOW', 'age_and_duration_rule') <= age_val(X) & (X >= 3) & (X <= 24) & dur24_val(True) & symp_val(False)
-        has_disposition('ER_NOW', 'age_and_duration_rule') <= dur3d_val(True)
-        has_disposition('ER_NOW', 'temperature_hard_gate') <= temp_val(X) & (X >= 104)
-        has_disposition('ER_NOW', 'behavioral_and_neurological_red_flag') <= leth_val(True)
-        has_disposition('ER_NOW', 'behavioral_and_neurological_red_flag') <= cranky_val(True)
-        has_disposition('ER_NOW', 'behavioral_and_neurological_red_flag') <= sleepy_val(True)
-        has_disposition('ER_NOW', 'behavioral_and_neurological_red_flag') <= seizure_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= breath_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= fast_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= pain_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= rash_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= vomit_val(True)
-        has_disposition('ER_NOW', 'physical_symptoms_and_pain') <= vomit24_val(True)
-        has_disposition('ER_NOW', 'dehydration_hard_gates') <= pee_val(False)
-        has_disposition('ER_NOW', 'dehydration_hard_gates') <= dry_val(True)
-        has_disposition('ER_NOW', 'underlying_conditions') <= chronic_val(True)
+        # ER NOW Rules
+        has_disposition('ER_NOW', 'infant_fever') <= age_val(X) & (X >= 0) & (X < 3) & temp_val(Y) & (Y >= 100.4)
+        has_disposition('ER_NOW', 'prolonged_fever_toddler') <= age_val(X) & (X >= 3) & (X <= 24) & dur24_val(True) & symp_val(False)
+        has_disposition('ER_NOW', 'prolonged_fever_generic') <= dur3d_val(True)
+        has_disposition('ER_NOW', 'high_fever_gate') <= temp_val(X) & (X >= 104)
+        has_disposition('ER_NOW', 'neurological_red_flag') <= leth_val(True)
+        has_disposition('ER_NOW', 'neurological_red_flag') <= cranky_val(True)
+        has_disposition('ER_NOW', 'neurological_red_flag') <= sleepy_val(True)
+        has_disposition('ER_NOW', 'neurological_red_flag') <= seizure_val(True)
+        has_disposition('ER_NOW', 'respiratory_distress') <= breath_val(True)
+        has_disposition('ER_NOW', 'respiratory_distress') <= fast_val(True)
+        has_disposition('ER_NOW', 'severe_pain') <= pain_val(True)
+        has_disposition('ER_NOW', 'unexplained_rash') <= rash_val(True)
+        has_disposition('ER_NOW', 'severe_vomiting') <= vomit_val(True)
+        has_disposition('ER_NOW', 'severe_vomiting') <= vomit24_val(True)
+        has_disposition('ER_NOW', 'dehydration') <= pee_val(False)
+        has_disposition('ER_NOW', 'dehydration') <= dry_val(True)
+        has_disposition('ER_NOW', 'underlying_condition') <= chronic_val(True)
 
-        has_disposition('HOME_OBSERVATION', 'home_observation') <= eating_val('normal appetite') & sleep_val(True) & ok_val(True) & behavior_val('playful') & age_val(X) & (X > 3) & temp_val(Y) & (Y >= 0) & (Y < 104) & dur3d_val(False)
+        # HOME OBSERVATION Rule
+        has_disposition('HOME_OBSERVATION', 'safe_for_home') <= eating_val('normal appetite') & sleep_val(True) & ok_val(True) & behavior_val('playful') & age_val(X) & (X > 3) & temp_val(Y) & (Y >= 0) & (Y < 104) & dur3d_val(False)
     """)
 
     # 2. Assert Facts
@@ -124,58 +124,54 @@ def logic_safety_agent(state: TriageState) -> Dict[str, Any] | Command:
     assert_v('sleep_val', True) 
     assert_v('ok_val', cs.cpg_comfort_level == 'good' or cs.cpg_comfort_level == 'ok' if cs.cpg_comfort_level else None)
 
-    # 3. Query Results
-    # ER NOW check first (highest priority)
-    er_results = pyDatalog.ask("has_disposition('ER_NOW', Reason)")
-    if er_results:
-        reasons = [r[0] for r in er_results.answers if r[0] != 'dummy']
-        if reasons:
-            reason = reasons[0]
-            return {
-                "decision": {"disposition": "Emergency Department Now", "reason": reason},
-                "datalog_proof_tree": {"disposition": "ER_NOW", "rules_fired": reasons}
-            }
-
-    # 4. Check for Missing Data if no ER triggers found
-    missing_query = "is_missing(Field) & required_for('complete_assessment', Field)"
-    missing_results = pyDatalog.ask(missing_query)
+    # 3. Decision Logic
+    # 3a. Check for missing data FIRST to ensure a complete clinical picture (as per Scenario 02)
+    missing_results = pyDatalog.ask("is_missing(Field) & required_for('complete_assessment', Field)")
     if missing_results:
         answers = [r[0] for r in missing_results.answers]
         unknowns = [a for a in answers if a != 'dummy']
         if unknowns:
             mapping = {
-                'age': 'cpg_age',
-                'temp': 'cpg_body_temperature',
-                'dur24': 'fever_longer_than_24_hours',
-                'dur3d': 'fever_longer_than_3_days',
-                'behavior': 'cpg_behavior',
-                'eating': 'cpg_eating',
-                'pee': 'cpg_wetting_diapers',
-                'dry': 'cpg_dry_mouth'
+                'age': 'cpg_age', 'temp': 'cpg_body_temperature',
+                'dur24': 'fever_longer_than_24_hours', 'dur3d': 'fever_longer_than_3_days',
+                'behavior': 'cpg_behavior', 'eating': 'cpg_eating',
+                'pee': 'cpg_wetting_diapers', 'dry': 'cpg_dry_mouth'
             }
             mapped_unknowns = [mapping.get(u, u) for u in unknowns]
-            return Command(
-                update={"unknowns": mapped_unknowns},
-                goto="interpretation_agent"
-            )
+            return {"unknowns": mapped_unknowns, "last_action": "safety_logic"}
 
-    # 5. Home Observation check
+    # 3b. If data is complete, evaluate triage rules
+    # Check ER triggers
+    er_results = pyDatalog.ask("has_disposition('ER_NOW', Reason)")
+    if er_results:
+        reasons = [r[0] for r in er_results.answers if r[0] != 'dummy']
+        if reasons:
+            return {
+                "decision": {"disposition": "Emergency Department Now", "reason": reasons[0]},
+                "datalog_proof_tree": {"disposition": "ER_NOW", "rules_fired": reasons},
+                "unknowns": [],
+                "last_action": "safety_logic"
+            }
+
+    # Check Home triggers
     home_results = pyDatalog.ask("has_disposition('HOME_OBSERVATION', Reason)")
     if home_results:
         reasons = [r[0] for r in home_results.answers if r[0] != 'dummy']
         if reasons:
-            reason = reasons[0]
             medications = []
-            if cs.cpg_age > 3: medications.append("acetaminophen")
-            if cs.cpg_age > 6: medications.append("ibuprofen")
-            
+            if cs.cpg_age and cs.cpg_age > 3: medications.append("acetaminophen")
+            if cs.cpg_age and cs.cpg_age > 6: medications.append("ibuprofen")
             return {
-                "decision": {"disposition": "Home Management", "reason": reason, "medications": medications},
-                "datalog_proof_tree": {"disposition": "HOME_OBSERVATION", "rules_fired": reasons, "medications": medications}
+                "decision": {"disposition": "Home Management", "reason": reasons[0], "medications": medications},
+                "datalog_proof_tree": {"disposition": "HOME_OBSERVATION", "rules_fired": reasons, "medications": medications},
+                "unknowns": [],
+                "last_action": "safety_logic"
             }
 
-    # Safety Default
+    # 3c. Default to ER if inconclusive
     return {
-        "decision": {"disposition": "Emergency Department Now", "reason": "Inconclusive assessment - escalating for safety"},
-        "datalog_proof_tree": {"disposition": "DEFAULT_ER", "reason": "No rules matched"}
+        "decision": {"disposition": "Emergency Department Now", "reason": "inconclusive_assessment"},
+        "datalog_proof_tree": {"disposition": "DEFAULT_ER", "reason": "No rules matched"},
+        "unknowns": [],
+        "last_action": "safety_logic"
     }
