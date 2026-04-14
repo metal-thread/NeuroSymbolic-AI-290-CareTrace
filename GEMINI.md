@@ -31,10 +31,13 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
    * **Routing & Edges:** Dynamically routes using standard (deterministic) and conditional (runtime) edges. **Crucially**, if the Logic Safety Agent determines that data is missing, the Orchestration Agent must route the workflow back to the Interpretation Agent to gather more information.
    * **Cyclic Routing & Sleep:** Handles multi-step, autonomous internal reasoning (looping). For conversational turns, the router directs execution to formulate a question and then routes to the `END` node, suspending the graph (thread sleeps) until new caregiver input is captured and appended.
 
-2. **Interpretation Agent (LLM):** * **Role:** The natural language intake node.
-   * **Extraction:** Extracts core clinical facts such as symptoms, timing/duration, hydration signals, and current medications from caregiver input.
-   * **State Update:** Populates the state with raw extracted data, looking for clinical facts *without making any decisions or triage assessments*.
-   * **Re-Invocation:** If triggered by the Orchestration Agent due to missing data, it formulates targeted, bounded follow-up questions to retrieve the missing fields.
+2. **Interpretation Agent (LLM):** * **Role:** The natural language intake and clinical fact extraction node.
+   * **Workflow:**
+      1. **Extraction:** Parses the latest `HumanMessage` to extract symptoms, medications, illness/symptom durations, child age, body temperature, and other clinical flags (hydration, red flags).
+      2. **JSON Extraction:** Returns structured data following a strictly observational schema.
+      3. **Clarification:** If the graph loops back with `unknowns` (missing critical fields), the agent formulates a targeted, brief, and natural follow-up question to the caregiver.
+   * **Observational Mandate:** Strictly extracts facts without performing any triage assessments, diagnoses, or providing medical advice.
+   * **State Update:** Merges extracted facts into `TriageState.clinical_state`, preserving existing information while appending new observations.
 
 3. **Knowledge Retrieval Agent (Neo4j):** * **Role:** The semantic grounding node.
    * **Workflow:** 
