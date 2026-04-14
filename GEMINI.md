@@ -37,9 +37,14 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
    * **Re-Invocation:** If triggered by the Orchestration Agent due to missing data, it formulates targeted, bounded follow-up questions to retrieve the missing fields.
 
 3. **Knowledge Retrieval Agent (Neo4j):** * **Role:** The semantic grounding node.
-   * **Graph Enrichment:** Enriches extracted facts by querying a Neo4j AuraDB instance preloaded with SNOMED CT data.
-   * **Tool Usage:** Utilizes tools (such as those in `symptom_finder.py`) to run Cypher queries.
-   * **Generalization & Attributes:** Traverses `IS_A` polyhierarchies to generalize specific findings. It also queries attribute relationships to retrieve actionable clinical references such as causative agents, medication dosing parameters, and contraindications. Findings are added directly to the state.
+   * **Workflow:** 
+      1. Inspects `TriageState.clinical_state.symptoms` and `medications` extracted by the Interpretation Agent.
+      2. Uses `get_symptoms_by_keywords` to find SNOMED CT concepts.
+      3. For each concept, traverses `IS_A` hierarchy via `get_parent_concept` for abstraction.
+      4. Inspects `REL` connections via `get_associated_concepts` to find clinical attributes (e.g., finding site, causative agent).
+      5. Updates `TriageState.clinical_state` boolean flags (e.g., `cpg_vomiting`, `cpg_seizure`, `cpg_rash`) based on findings.
+      6. Stashes full grounding details in `TriageState.medical_ontology_findings`.
+   * **Tool Usage:** Utilizes tools in `snomed_kg/symptom_finder.py`.
 
 4. **Logic Safety Agent (pyDatalog):** * **Role:** The deterministic supervisor.
    * **Reasoning:** Performs bottom-up deductive reasoning on the grounded facts supplied by the Knowledge Retrieval Agent.
@@ -51,6 +56,18 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
    * **Clinical Highlights:** Must highlight key positive and negative findings and explicitly identify any safety net thresholds that were crossed.
    * **Uncertainty Mandate:** Must explicitly state what is *known*, *unknown*, *assumed*, and *suggested by priors*.
    * **Provenance:** To justify individual triage outcomes, the agent must include the exact deterministic decision rules used for the patient in its final output.
+
+   The state is defined under agents/triage_state.py in the class TriageState. TriageState contains a field called clinical_state of type ClinicalState.
+
+### Neurosymbolic Triage Workflow & State Lifecycle
+The workflow is orchestrated as a cyclic graph where each agent interacts with the `TriageState` to move the case toward a safe disposition:
+
+1.  **Intake & Observation (Interpretation Agent):** The agent parses natural language into `clinical_state.symptoms`, `clinical_state.medications`, and duration fields (`symptom_duration`, `illness_duration`). It populates `clinical_state.raw_caregiver_responses` but remains strictly observational, avoiding any triage assessments.
+2.  **Semantic Grounding (Knowledge Retrieval Agent):** Using the extracted facts, this agent queries Neo4j for SNOMED CT concepts. It generalizes findings via `IS_A` hierarchies and extracts clinical attributes (severity, causative agents) via `REL` relationships. These are stashed in `medical_ontology_findings`.
+3.  **Deterministic Reasoning (Logic Safety Agent):** The agent evaluates clinical practice guidelines (CPGs) using `pyDatalog` against the grounded findings. 
+    *   **Success:** If all rules evaluate, the agent saves the disposition and the full logic trace to `datalog_proof_tree`.
+    *   **Missing Data:** If critical variables (e.g., temperature, duration) are missing, the agent populates the `unknowns` list and triggers a LangGraph conditional edge to route execution back to the **Interpretation Agent**.
+4.  **Clinical Translation (Explanation Agent):** Once a decision is reached, this agent consumes the `datalog_proof_tree` to generate a natural language summary for the caregiver, ensuring full provenance for the recommended disposition.
 
 ---
 
@@ -90,8 +107,11 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
 ---
 
 # Testing Framework
-Because this is a safety-critical clinical system, testing is paramount:
+Testing is paramount. When working with dot py files, tests will be stored in the "tests" folder. Additionally:
+
 1. **Unit Testing (Logic):** Use `pytest` to strictly test pyDatalog rules. Feed permutations of clinical facts (including edge cases and missing data) to ensure the logic engine routes to the correct disposition 100% of the time. (These can be run directly inside Jupyter cells or as separate `.py` scripts).
 2. **State Testing (LangGraph):** Write tests to simulate the graph execution, ensuring that missing required information successfully triggers a loop-back to the Interpretation Agent.
 3. **Graph DB Testing:** Use a mock graph or testcontainer for Neo4j to validate Cypher query results.
 4. **LLM Evaluation:** Use evaluation frameworks (like LangSmith or prompt-testing suites) to ensure the Interpretation Agent reliably extracts the correct SNOMED entities from diverse human text.
+
+Leverage the scenarios described in md files under the "scenarios" folder to understand how to verify system behavior.
