@@ -58,10 +58,15 @@ The system consists of 5 specific agents orchestrating the neurosymbolic pipelin
    * **Safety Defaults:** If no rules match or assessment is ambiguous, the agent defaults to the highest acuity disposition (Emergency Department Now).
 
 5. **Explanation Agent (LLM):** * **Role:** The clinical translator.
-   * **Summary Generation:** Translates the raw pyDatalog proof tree into an understandable, audit-grade, clinician-style summary.
-   * **Clinical Highlights:** Must highlight key positive and negative findings and explicitly identify any safety net thresholds that were crossed.
-   * **Uncertainty Mandate:** Must explicitly state what is *known*, *unknown*, *assumed*, and *suggested by priors*.
-   * **Provenance:** To justify individual triage outcomes, the agent must include the exact deterministic decision rules used for the patient in its final output.
+   * **Workflow:**
+      1. Receives the `TriageState` containing the `datalog_proof_tree`.
+      2. Uses Gemini 3 Pro to translate the raw symbolic logic into a warm, professional caregiver message.
+      3. **Structure:**
+         *   **Disposition:** Clear recommendation (ER vs Home).
+         *   **Rationale:** Paraphrased justification based on rules fired (e.g., "Because your infant has a high fever...").
+         *   **Comfort Measures:** Guidance on acetaminophen/ibuprofen if applicable for home care.
+         *   **Safety Net:** Red flags to watch for.
+   * **Config:** Gemini-3-Pro with `thinking={"include_thoughts": True}` and `tool_calling_method="json_schema"`.
 
    The state is defined under agents/triage_state.py in the class TriageState. TriageState contains a field called clinical_state of type ClinicalState.
 
