@@ -2,6 +2,7 @@ import os
 from typing import Dict, Any, List, Literal
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 
 from triage_state import TriageState, ClinicalState
 from interpretation_agent import interpretation_agent
@@ -70,7 +71,11 @@ def create_triage_graph():
     workflow.add_edge("explanation_agent", END)
 
     # Persistence
-    memory = MemorySaver()
+    my_serializer = JsonPlusSerializer(allowed_msgpack_modules=[
+        ("triage_state", "ClinicalState"),
+        ("triage_state", "TriageState")
+    ])
+    memory = MemorySaver(serde=my_serializer)
     app = workflow.compile(checkpointer=memory)
     
     return app
