@@ -122,7 +122,7 @@ The workflow is orchestrated as a cyclic graph where each agent interacts with t
   * Add inline comments explaining the clinical intent of every logical threshold or red-flag gate.
 * **Gemini-3 Configuration**: Configure the system with
   * `gemini-3-flash-preview` as the default model.
-  * thinking={"include_thoughts": True, "thinking_level": "minimal"} and tool_calling_method="json_schema" (passed via `model_kwargs`), following 2026 project standards.
+  * thinking={"include_thoughts": False, "thinking_level": "minimal"} and tool_calling_method="json_schema" (passed via `model_kwargs`), following 2026 project standards.
   * LangGraph & Interaction-Aware State: Used StateGraph with a TriageState that utilizes add_messages for history management.
   * Automatic Thought Signature Handling: The architecture preserves thought_signature and reasoning metadata within the message history, ensuring consistency across multi-turn interactions.
   * MemorySaver: Integrated for round-trip serialization and persistent conversation threads.

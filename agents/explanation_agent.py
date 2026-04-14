@@ -29,7 +29,7 @@ def explanation_agent(state: TriageState) -> Dict[str, Any]:
         temperature=float(os.environ.get("LLM_TEMP", "0.3")),
         google_api_key=os.environ.get("GEMINI_API_KEY"),
         model_kwargs={
-            "thinking": {"include_thoughts": True, "thinking_level": "minimal"},
+            "thinking": {"include_thoughts": False, "thinking_level": "minimal"},
             "tool_calling_method": "json_schema"
         }
     )
