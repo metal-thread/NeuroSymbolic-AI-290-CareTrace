@@ -3,12 +3,35 @@ from typing import Dict, Any, List, Literal
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+from langchain_core.runnables import RunnableConfig
+from neo4j import GraphDatabase
+from dotenv import load_dotenv
 
 from triage_state import TriageState, ClinicalState
 from interpretation_agent import interpretation_agent
 from knowledge_retrieval_agent import knowledge_retrieval_agent
 from logic_safety_agent import logic_safety_agent
 from explanation_agent import explanation_agent
+
+# Initialize a persistent Neo4j driver at the module level
+load_dotenv()
+NEO4J_URI = os.environ.get("NEO4J_URI")
+NEO4J_USER = os.environ.get("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD")
+
+if NEO4J_URI and NEO4J_USER and NEO4J_PASSWORD:
+    NEO4J_DRIVER = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+else:
+    NEO4J_DRIVER = None
+
+def persistent_knowledge_retrieval_agent(state: TriageState, config: RunnableConfig):
+    """
+    Wrapper that injects the persistent Neo4j driver into the node's config.
+    """
+    if "configurable" not in config:
+        config["configurable"] = {}
+    config["configurable"]["neo4j_driver"] = NEO4J_DRIVER
+    return knowledge_retrieval_agent(state, config)
 
 def interpretation_router(state: TriageState) -> Literal["knowledge_retrieval_agent", "__end__"]:
     """
@@ -37,7 +60,7 @@ def create_triage_graph():
 
     # Nodes
     workflow.add_node("interpretation_agent", interpretation_agent)
-    workflow.add_node("knowledge_retrieval_agent", knowledge_retrieval_agent)
+    workflow.add_node("knowledge_retrieval_agent", persistent_knowledge_retrieval_agent)
     workflow.add_node("logic_safety_agent", logic_safety_agent)
     workflow.add_node("explanation_agent", explanation_agent)
 

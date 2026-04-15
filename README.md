@@ -8,6 +8,7 @@ DATASCI 290 Final Project
 - [Development Environment](#development-environment)
 - [Running the Demo](#running-the-demo)
 - [References](#references)
+- [Performance & Optimization](#performance--optimization)
 
 ## High Level Overview
 
@@ -175,3 +176,22 @@ The following reference materials are available in the `references/` folder:
 - [Architecting Intelligence](./references/Architecting_Intelligence.pdf): An extremely short guide on the evolution from property graphs to Neuro-Symbolic AI architectures.
 - [Mastering pyDatalog](./references/Mastering_pyDatalog_Knowledge_Graphs.pdf): A very quick intro to using declarative logic and pyDatalog for building medical knowledge graphs.
 
+## Performance & Optimization
+
+### **Latency Hypothesis & Testing**
+During development, we observed high latency in turn-by-turn interactions. A performance profiling suite was developed to identify bottlenecks between Large Language Model (LLM) calls and Knowledge Graph (Neo4j) lookups.
+
+**Key Profiling Results:**
+- **`interpretation_agent` (LLM):** ~5.5s – 6.2s
+- **`knowledge_retrieval_agent` (Neo4j):** ~7.1s – 9.8s
+- **`explanation_agent` (LLM):** ~7.5s
+- **Symbolic Logic (`logic_safety_agent`):** ~0.04s
+
+**Findings:**
+Contrary to initial hypotheses, **database connection overhead** was the primary bottleneck rather than LLM inference. The `knowledge_retrieval_agent` performed multiple sequential SNOMED CT lookups, each incurring a ~0.5s TLS/Auth handshake overhead because the Neo4j driver was being re-instantiated for every query.
+
+### **Optimization: Persistent Connections**
+To resolve this, the system was refactored to use a **persistent Neo4j driver** instantiated at the orchestrator level. By reusing the driver across all nodes and queries, we eliminated the repeated handshake overhead, reducing cumulative database latency by over 80% and significantly improving the responsiveness of the triage pipeline.
+
+---
+© 2026 CareTrace Team. Confidential Clinical Triage Prototype.

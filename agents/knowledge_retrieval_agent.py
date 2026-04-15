@@ -1,4 +1,5 @@
 from typing import Dict, Any, List
+from langchain_core.runnables import RunnableConfig
 from triage_state import TriageState, ClinicalState
 from snomed_kg.symptom_finder import (
     get_symptoms_by_keywords, 
@@ -6,7 +7,7 @@ from snomed_kg.symptom_finder import (
     get_associated_concepts
 )
 
-def knowledge_retrieval_agent(state: TriageState) -> Dict[str, Any]:
+def knowledge_retrieval_agent(state: TriageState, config: RunnableConfig) -> Dict[str, Any]:
     clinical_state = state.get("clinical_state")
     if clinical_state is None:
         clinical_state = ClinicalState()
@@ -17,9 +18,13 @@ def knowledge_retrieval_agent(state: TriageState) -> Dict[str, Any]:
     if not keywords:
         return {}
 
+    # Extract persistent Neo4j driver from config if available
+    configurable = config.get("configurable", {})
+    driver = configurable.get("neo4j_driver")
+
     # 1. Find SNOMED concepts for keywords
     try:
-        matched_concepts = get_symptoms_by_keywords.invoke({"keywords": keywords})
+        matched_concepts = get_symptoms_by_keywords.invoke({"keywords": keywords, "driver": driver})
     except Exception as e:
         print(f"Error in get_symptoms_by_keywords: {e}")
         matched_concepts = []
@@ -40,14 +45,14 @@ def knowledge_retrieval_agent(state: TriageState) -> Dict[str, Any]:
         # 2. Generalize via IS_A hierarchy (Parent concepts)
         parents = []
         try:
-            parents = get_parent_concept.invoke({"concept_id": concept_id})
+            parents = get_parent_concept.invoke({"concept_id": concept_id, "driver": driver})
         except Exception as e:
             print(f"Error in get_parent_concept for {concept_id}: {e}")
 
         # 3. Inspect REL connections (Associated concepts)
         associations = []
         try:
-            associations = get_associated_concepts.invoke({"concept_id": concept_id})
+            associations = get_associated_concepts.invoke({"concept_id": concept_id, "driver": driver})
         except Exception as e:
             print(f"Error in get_associated_concepts for {concept_id}: {e}")
 

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from langchain_core.tools import tool
 try:
     from snomed_kg.snomed2neo import execute_cypher_query
@@ -6,7 +6,7 @@ except ImportError:
     from snomed2neo import execute_cypher_query
 
 @tool
-def get_symptoms_by_keywords(keywords: List[str]) -> List[Dict[str, Any]]:
+def get_symptoms_by_keywords(keywords: List[str], driver: Optional[Any] = None) -> List[Dict[str, Any]]:
     """
     Use this tool to find specific SNOMED CT medical concepts or symptoms by their names.
     Input should be a list of strings representing the symptoms you want to look up (e.g., ["fever", "vomiting"]).
@@ -18,11 +18,10 @@ def get_symptoms_by_keywords(keywords: List[str]) -> List[Dict[str, Any]]:
     RETURN c.sctid AS ConceptID, c.pt AS SymptomTerm
     ORDER BY SymptomTerm
     """
-    # Notice we removed the driver argument; execute_cypher_query will use env vars
-    return execute_cypher_query(query, {"keywords": keywords})
+    return execute_cypher_query(query, {"keywords": keywords}, driver=driver)
 
 @tool
-def get_specialized_symptoms(parent_keyword: str, max_hops: int = 3) -> List[Dict[str, Any]]:
+def get_specialized_symptoms(parent_keyword: str, max_hops: int = 3, driver: Optional[Any] = None) -> List[Dict[str, Any]]:
     """
     Use this tool when you need to find more specific variations of a broad symptom. 
     For example, if the user asks for "types of fever" or "specific variations of lethargy".
@@ -38,10 +37,10 @@ def get_specialized_symptoms(parent_keyword: str, max_hops: int = 3) -> List[Dic
         specific.pt AS SpecificSymptom, 
         general.pt AS ParentSymptom
     """
-    return execute_cypher_query(query, {"parent_keyword": parent_keyword})
+    return execute_cypher_query(query, {"parent_keyword": parent_keyword}, driver=driver)
 
 @tool
-def get_symptoms_by_relationship_type(rel_type: str, limit: int = 50) -> List[Dict[str, Any]]:
+def get_symptoms_by_relationship_type(rel_type: str, limit: int = 50, driver: Optional[Any] = None) -> List[Dict[str, Any]]:
     """
     Use this tool to find symptoms based on their physical location or defining attributes in the body.
     Input 'rel_type' must be a valid SNOMED relationship type, most commonly "Finding site" (to find symptoms related to a body part) or "Associated morphology".
@@ -56,7 +55,7 @@ def get_symptoms_by_relationship_type(rel_type: str, limit: int = 50) -> List[Di
         target.pt AS TargetConcept
     LIMIT toInteger($limit)
     """
-    return execute_cypher_query(query, {"rel_type": rel_type, "limit": limit})
+    return execute_cypher_query(query, {"rel_type": rel_type, "limit": limit}, driver=driver)
 
 @tool
 def get_available_relationship_types() -> List[str]:
@@ -72,7 +71,7 @@ def get_available_relationship_types() -> List[str]:
             "Property", "Scale type"]
 
 @tool
-def get_parent_concept(concept_id: str) -> List[Dict[str, Any]]:
+def get_parent_concept(concept_id: str, driver: Optional[Any] = None) -> List[Dict[str, Any]]:
     """
     Use this tool to find the parent(s) of a specific SNOMED CT medical concept.
     Input 'concept_id' must be a valid SNOMED CT ID string (e.g., '386661006' for Fever).
@@ -82,10 +81,10 @@ def get_parent_concept(concept_id: str) -> List[Dict[str, Any]]:
     MATCH (child:Concept {sctid: $concept_id})-[:IS_A]->(parent:Concept)
     RETURN parent.sctid AS ParentID, parent.pt AS ParentTerm
     """
-    return execute_cypher_query(query, {"concept_id": concept_id})
+    return execute_cypher_query(query, {"concept_id": concept_id}, driver=driver)
 
 @tool
-def get_associated_concepts(concept_id: str) -> List[Dict[str, Any]]:
+def get_associated_concepts(concept_id: str, driver: Optional[Any] = None) -> List[Dict[str, Any]]:
     """
     Use this tool to find concepts associated with a specific SNOMED CT medical concept 
     via defined attributes (e.g., 'Finding site', 'Causative agent').
@@ -99,4 +98,4 @@ def get_associated_concepts(concept_id: str) -> List[Dict[str, Any]]:
         target.sctid AS TargetID, 
         target.pt AS TargetTerm
     """
-    return execute_cypher_query(query, {"concept_id": concept_id})
+    return execute_cypher_query(query, {"concept_id": concept_id}, driver=driver)
