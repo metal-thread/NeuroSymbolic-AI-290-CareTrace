@@ -27,15 +27,15 @@ CareTrace is a high-stakes, trustworthy pediatric after-hours clinical triage sy
 - **Care Instructions:** Comfort measures and medication dosing (e.g., acetaminophen/ibuprofen) where safe.
 
 ### Project Structure
-- **`agents/`**: Core multi-agent implementation (Interpretation, Knowledge Retrieval, Logic Safety, Explanation) and LangGraph state definitions.
-- **`snomed_kg/`**: Tools for querying and building the Neo4j clinical knowledge graph.
-- **`tests/`**: Unit and integration tests for all agents and symbolic rules.
-- **`scenarios/`**: Markdown-based clinical scenarios for system validation.
-- **`references/`**: Technical guides on Neurosymbolic AI and pyDatalog.
-- **`preload_neo4jauradb.py`**: Bootstraps the Neo4j database with clinical concepts.
-- **`GEMINI.md`**: Foundation mandates, safety rules, and architectural standards.
-- **`Dockerfile`**: Environment configuration for containerized development.
-- **`requirements.txt`**: Project dependencies.
+- [**`agents/`**](./agents/): Core multi-agent implementation (Interpretation, Knowledge Retrieval, Logic Safety, Explanation) and LangGraph state definitions.
+- [**`snomed_kg/`**](./snomed_kg/): Tools for querying and building the Neo4j clinical knowledge graph.
+- [**`tests/`**](./tests/): Unit and integration tests for all agents and symbolic rules.
+- [**`scenarios/`**](./scenarios/): Markdown-based clinical scenarios for system validation.
+- [**`references/`**](./references/): Technical guides on Neurosymbolic AI and pyDatalog.
+- [**`preload_neo4jauradb.py`**](./preload_neo4jauradb.py): Bootstraps the Neo4j database with clinical concepts.
+- [**`GEMINI.md`**](./GEMINI.md): Foundation mandates, safety rules, and architectural standards.
+- [**`Dockerfile`**](./Dockerfile): Environment configuration for containerized development.
+- [**`requirements.txt`**](./requirements.txt): Project dependencies.
 
 ## Knowledge Graph Design
 
